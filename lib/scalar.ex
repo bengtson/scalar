@@ -133,7 +133,9 @@ defmodule Scalar do
       magnitude = scalar.magnitude
       list = 0..scalar.minor_ticks_allowed
         |> Enum.map(fn(x) -> {x, x * minor_tick_value, magnitude, tick_type(x,sync_factor)} end)
-      trim_ticks(list, scalar.maximum_value, scalar.stop)
+
+      # Trim the tick list to those specified by the caller.
+      trim_ticks(list, scalar.adjusted_range, scalar.stop)
     end
 
     def get_tick_list %Scalar{sync: false} = scalar do
@@ -146,10 +148,27 @@ defmodule Scalar do
     end
 
     defp trim_ticks list, value, type do
-      IO.inspect value
-      IO.inspect type
-      list
-#        |> Enum.find(fn({}))
+      val_index =
+        list
+        |> Enum.find_index(fn({_,val,_,_}) -> val >= value end)
+      {keep_list,other_list} =
+        list
+        |> Enum.split(val_index)
+      IO.inspect other_list
+      type_index =
+        other_list
+        |> Enum.find_index(fn({_,_,_,t}) -> t == type end)
+      IO.inspect type_index
+      case type_index do
+        nil ->
+          [keep_list]
+        _ ->
+
+          {type_list,_} =
+            other_list
+            |> Enum.split(type_index + 1)
+          keep_list ++ type_list
+      end
     end
 
 
@@ -169,8 +188,8 @@ defmodule Scalar do
     end
 
     def test do
-      data = [0.0,100.4]
-      a = create data, 10, 18
+      data = [0.0,95.0]
+      a = create data, 10, 20, [stop: :major]
       get_tick_list a
     end
 

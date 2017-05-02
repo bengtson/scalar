@@ -6,7 +6,16 @@ Elixir library for generating scaled ranges for axis used in charts and graphs.
 
 Development Snapshot
 
+Scalar working for zero-based ranges with sync and stop options.
 
+## Development List
+
+  - Get the trim list working for non-synced minor major tick lists.
+  - Modify the code to handle a non-zero based range.
+  - Modify the code to handle a zero crossed range.
+  - Modify the code to handle a negative zero pinned range.
+  - Update the documentation.
+  - Add the ExDocs
 
 ## Installation
 
