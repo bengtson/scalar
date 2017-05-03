@@ -5,29 +5,33 @@ defmodule ScalarTest do
   test "simple check" do
     data = [0, 10]
     a = Scalar.create data, 10, 18
-    assert a.minor_tick_factor == 10
-    assert a.major_tick_factor == 10
+    assert a.minor_factor == 10
+    assert a.major_factor == 10
   end
 
   test "simple check 2" do
     data = [0, 11]
     a = Scalar.create data, 10, 18
-    assert a.minor_tick_factor == 10
-    assert a.major_tick_factor == 5
+    assert a.minor_factor == 10
+    assert a.major_factor == 5
   end
 
   test "check sync true" do
     data = [0, 1]
     a = Scalar.create data, 4, 5, [sync: true]
-    assert a.minor_tick_factor == 4
-    assert a.major_tick_factor == 4
+    assert a.minor_factor == 4
+    assert a.major_factor == 4
   end
 
-  test "check sync false" do
+  test "check sync false stop major" do
     data = [0, 1]
-    a = Scalar.create data, 4, 5, [sync: false]
-    assert a.minor_tick_factor == 5
-    assert a.major_tick_factor == 4
+    a = Scalar.create data, 4, 5, [sync: false, stop: :true]
+    minor_list = Scalar.get_minor_tick_list a
+    major_list = Scalar.get_major_tick_list a
+    assert length(minor_list) == 6
+    assert length(major_list) == 5
+    assert a.minor_factor == 5
+    assert a.major_factor == 4
   end
 
   test "check tick list major, minor" do

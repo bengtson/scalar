@@ -4,14 +4,14 @@ Elixir library for generating scaled ranges for axis used in charts and graphs. 
 
 Take the following example where the y data for a chart has the following values:
 
-    data = [0.0, 4.5, 2.3, 7.8, 1.0, 3.0, 6.3]
+    data = [4.5, 2.3, 7.8, 1.0, 3.0, 6.3]
 
 It's easy to determine a range for plotting the data when you can see the data or know the range but many times, the data might be unknown. Choosing an appropriate range make sure that the plotted data is shown in the best range possible.
 
 For the data above, all information needed for plotting data using the Scaler module as follows:
 
     tick_list =
-      Scalar.create(:data, data, 10, 20, [sync: true, stop: :major])
+      Scalar.create(data, 10, 20)
       |> Scalar.get_tick_list
 
 Returns the following list of tuples:
@@ -40,12 +40,15 @@ The same approach can be used for the X axis and grid lines.
 
 Development Snapshot
 
-Added :zero option that makes sure range will include zero.
-Additional documentation done.
+Major refactoring to clean up the code.
+Tests working.
+Need to better define the :stop functionality.
+
 
 ## Development List
 
-  - Get the trim list working for non-synced minor major tick lists.
+  - Get the trim list tested for non-sync'd separate lists.
+  - Trimming list needs a lot of work.  Better definition.
   - Modify the code to handle a non-zero based range.
   - Modify the code to handle a zero crossed range.
   - Modify the code to handle a negative zero pinned range.

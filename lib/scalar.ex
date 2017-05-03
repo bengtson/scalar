@@ -9,24 +9,22 @@ defmodule Scalar do
     - Handle tick list where sync is false.
 
     """
-      def factors do
-        [20, 10, 5, 4, 2, 1]
-      end
 
     defstruct [
-      factor_list: nil,
-      minimum_value: nil,
-      maximum_value: nil,
+      factors: [20, 10, 5, 4, 2, 1],
+      data: nil,
+      data_minimum: nil,
+      data_maximum: nil,
+      major_allowed: nil,
+      minor_allowed: nil,
       range: nil,
-      major_ticks_allowed: nil,
-      minor_ticks_allowed: nil,
-      minor_tick_factor: nil,
-      major_tick_factor: nil,
-      tick_low_index: nil,
-      tick_high_index: nil,
-      adjusted_range: nil,
+      normalized_range: nil,
       magnitude: nil,
       log: nil,
+      minor_target: nil,
+      major_target: nil,
+      minor_factor: nil,
+      major_factor: nil,
       sync: true,
       stop: :major,
       zero: true
@@ -53,80 +51,88 @@ defmodule Scalar do
     one of the data elements and return the single data value.
     """
 
-    def create :data, data, major, minor, opts do
-      {min, max} =
-        data
-        |> Enum.min_max
-      create [min,max], major, minor, opts
+    def create data, major_allowed, minor_allowed, opts \\ [] do
+
+      %Scalar{}
+      |> struct(opts)
+      |> struct(data: data)
+      |> struct(major_allowed: major_allowed, minor_allowed: minor_allowed)
+      |> inject_zero_option
+      |> calc_key_parameters
+      |> layout_ticks
+      |> sync_ticks_option
+
     end
 
-    def create data, major_ticks, minor_ticks, opts \\ [] do
-
-      # Create structure for scalar.
-      scalar = %Scalar{}
-
-      # Append options.
-      scalar = struct(scalar,opts)
-
-      # Add a zero if a zero should be included in the range.
-      data = case scalar.zero do
-        true -> data ++ [0.0]
-        false -> data
+    defp inject_zero_option scalar do
+      case scalar.zero do
+        true -> struct(scalar, data: [0.0] ++ scalar.data)
+        false -> scalar
       end
+    end
 
-      # Get the min and max for the data range.
-      {min, max} =
-        data
-        |> Enum.min_max
-
-      # Add factor list used.
-      scalar = struct(scalar,
-        factors: factors())
-
-      # Add parameters to structure.
-      scalar = struct(scalar,
-        minimum_value: min,
-        maximum_value: max,
-        major_ticks_allowed: major_ticks,
-        minor_ticks_allowed: minor_ticks
-      )
-
-      # Get value range and adjusted range.
-      range =  max - min
+    defp calc_key_parameters scalar do
+      {min, max} = scalar.data |> Enum.min_max
+      range = max - min
       log = :math.log10 range
       magnitude = trunc(log)
-      adjusted_range = :math.pow(10,log-magnitude)
+      normalized_range = :math.pow(10,log-magnitude)
 
-      # Calculate the target minor and major tick values.
-      target_minor_tick_value = adjusted_range / minor_ticks
-      target_major_tick_value = adjusted_range / major_ticks
+      struct(scalar,
+        data_minimum: min,
+        data_maximum: max,
+        range: range,
+        log: log,
+        magnitude: magnitude,
+        normalized_range: normalized_range
+      )
+    end
+
+    defp layout_ticks scalar do
+
+      # Set tick target value.
+      normalized_range = scalar.normalized_range
+      minor_target = normalized_range / scalar.minor_allowed
+      major_target = normalized_range / scalar.major_allowed
 
       # Find the best tick values based on the factor table. This will be the
       # most ticks without exceeding the specified maximum ticks allowed.
-      minor_tick_factor =
-        factors()
-        |> Enum.find(fn(x) -> 1.0/x >= target_minor_tick_value end)
+      minor_factor =
+        scalar.factors
+        |> Enum.find(fn(x) -> 1.0/x >= minor_target end)
 
-      major_tick_factor =
-        factors()
-        |> Enum.find(fn(x) -> 1.0/x >= target_major_tick_value end)
+      major_factor =
+        scalar.factors
+        |> Enum.find(fn(x) -> 1.0/x >= major_target end)
+
+      # Place in structure.
+      struct(scalar,
+        minor_target: minor_target,
+        major_target: major_target,
+        minor_factor: minor_factor,
+        major_factor: major_factor
+      )
+    end
+
+    # Given a major and minor factor, the minor factor is adjusted to make
+    # sure it is synchronized with the major factors.
+    defp sync_ticks_option scalar do
+
+      # Get tick factors.
+      minor_factor = scalar.minor_factor
+      major_factor = scalar.major_factor
 
       # Adjust minor factor if not synced to major.
-      minor_tick_factor = case scalar.sync do
+      minor_factor = case scalar.sync do
         false ->
-          minor_tick_factor
+          minor_factor
         true ->
-          sync_minor_tick minor_tick_factor, major_tick_factor
+          scalar.factors
+          |> Enum.filter(fn(x) -> x <= minor_factor end)
+          |> Enum.find(fn(x) -> rem(x,major_factor) == 0 end)
       end
 
-      struct(scalar,
-        range: range,
-        adjusted_range: adjusted_range,
-        log: log,
-        magnitude: magnitude,
-        minor_tick_factor: minor_tick_factor,
-        major_tick_factor: major_tick_factor,
-      )
+      struct(scalar, minor_factor: minor_factor)
     end
 
     @doc """
@@ -141,29 +147,48 @@ defmodule Scalar do
 
     """
     def get_tick_list %Scalar{sync: true} = scalar do
-      minor_tick_value = 1.0 / scalar.minor_tick_factor
-      sync_factor = div(scalar.minor_tick_factor, scalar.major_tick_factor)
+      minor_tick_value = 1.0 / scalar.minor_factor
+      sync_factor = div(scalar.minor_factor, scalar.major_factor)
       magnitude = scalar.magnitude
-      list = 0..scalar.minor_ticks_allowed
+      list = 0..scalar.minor_allowed
         |> Enum.map(fn(x) -> {x, x * minor_tick_value, magnitude, tick_type(x,sync_factor)} end)
 
       # Trim the tick list to those specified by the caller.
-      trim_ticks(list, scalar.adjusted_range, scalar.stop)
+      trim_ticks(list, scalar.normalized_range, scalar.stop)
     end
 
-    def get_tick_list %Scalar{sync: false} = scalar do
+    def get_minor_tick_list scalar do
       # Where sync is false, what to do?
-      minor_tick_value = 1.0 / scalar.minor_tick_factor
-      sync_factor = div(scalar.minor_tick_factor, scalar.major_tick_factor)
+      minor_tick_value = 1.0 / scalar.minor_factor
       magnitude = scalar.magnitude
-      0..scalar.minor_ticks_allowed
-        |> Enum.map(fn(x) -> {x, x * minor_tick_value, magnitude, tick_type(x,sync_factor)} end)
+      list =
+        0..scalar.minor_allowed
+        |> Enum.map(fn(x) -> {x, x * minor_tick_value, magnitude, :minor} end)
 
       # Trim the tick list to those specified by the caller.
-      trim_ticks(list, scalar.adjusted_range, scalar.stop)
+      trim_ticks(list, scalar.normalized_range, scalar.stop)
+    end
+
+    def get_major_tick_list scalar do
+      # Where sync is false, what to do?
+      major_tick_value = 1.0 / scalar.major_factor
+      magnitude = scalar.magnitude
+      list =
+        0..scalar.major_allowed
+        |> Enum.map(fn(x) -> {x, x * major_tick_value, magnitude, :major} end)
+
+      # Trim the tick list to those specified by the caller.
+      trim_ticks(list, scalar.normalized_range, scalar.stop)
     end
 
     defp trim_ticks list, value, type do
+      type = case type do
+        true ->
+          [{_,_,_,stop} | _] = list
+          stop
+        _ ->
+          type
+      end
       val_index =
         list
         |> Enum.find_index(fn({_,val,_,_}) -> val >= value end)
@@ -193,14 +218,6 @@ defmodule Scalar do
       end
     end
 
-    # Given a major and minor factor, the minor factor is adjusted to make
-    # sure it is synchronized with the major factors.
-    defp sync_minor_tick minor_factor, major_factor do
-      factors()
-      |> Enum.filter(fn(x) -> x <= minor_factor end)
-      |> Enum.find(fn(x) -> rem(x,major_factor) == 0 end)
-    end
-
     def test do
       data = {0.0,95.0}
       a = create data, 10, 20, [stop: :major]
@@ -209,7 +226,7 @@ defmodule Scalar do
 
     def test2 do
       data = [4.5, 2.3, 7.8, 1.0, 3.0, 6.3]
-      Scalar.create(:data, data, 10, 20, [sync: true, stop: :major])
+      Scalar.create(data, 10, 20)
       |> Scalar.get_tick_list
     end
   end
