@@ -28,7 +28,8 @@ defmodule Scalar do
       magnitude: nil,
       log: nil,
       sync: true,
-      stop: :major
+      stop: :major,
+      zero: true
     ]
 
     @doc """
@@ -48,13 +49,35 @@ defmodule Scalar do
       The :major option will continue until the first major tick after the max data value.
 
     See the documentation for create/3. The `fun` argument should be provided
-    if the data list has more than single data points. The function must take
+    if the data list has  more than single data points. The function must take
     one of the data elements and return the single data value.
     """
-    def create [min,max], major_ticks, minor_ticks, opts \\ [] do
+
+    def create :data, data, major, minor, opts do
+      {min, max} =
+        data
+        |> Enum.min_max
+      create [min,max], major, minor, opts
+    end
+
+    def create data, major_ticks, minor_ticks, opts \\ [] do
 
       # Create structure for scalar.
       scalar = %Scalar{}
+
+      # Append options.
+      scalar = struct(scalar,opts)
+
+      # Add a zero if a zero should be included in the range.
+      data = case scalar.zero do
+        true -> data ++ [0.0]
+        false -> data
+      end
+
+      # Get the min and max for the data range.
+      {min, max} =
+        data
+        |> Enum.min_max
 
       # Add factor list used.
       scalar = struct(scalar,
@@ -67,9 +90,6 @@ defmodule Scalar do
         major_ticks_allowed: major_ticks,
         minor_ticks_allowed: minor_ticks
       )
-
-      # Append options.
-      scalar = struct(scalar,opts)
 
       # Get value range and adjusted range.
       range =  max - min
@@ -121,13 +141,6 @@ defmodule Scalar do
 
     """
     def get_tick_list %Scalar{sync: true} = scalar do
-      # Where sync is true, simply go through the minor list
-      # and tag any minors that fall on major tick values.
-
-      # calculate a stop index based on major or minor
-#      stop_atom = scalar.stop
-#      stop_value = :math.pow(10,-scalar.magnitude) * scalar.maximum_value
-#      IO.inspect stop_value
       minor_tick_value = 1.0 / scalar.minor_tick_factor
       sync_factor = div(scalar.minor_tick_factor, scalar.major_tick_factor)
       magnitude = scalar.magnitude
@@ -145,6 +158,9 @@ defmodule Scalar do
       magnitude = scalar.magnitude
       0..scalar.minor_ticks_allowed
         |> Enum.map(fn(x) -> {x, x * minor_tick_value, magnitude, tick_type(x,sync_factor)} end)
+
+      # Trim the tick list to those specified by the caller.
+      trim_ticks(list, scalar.adjusted_range, scalar.stop)
     end
 
     defp trim_ticks list, value, type do
@@ -154,11 +170,9 @@ defmodule Scalar do
       {keep_list,other_list} =
         list
         |> Enum.split(val_index)
-      IO.inspect other_list
       type_index =
         other_list
         |> Enum.find_index(fn({_,_,_,t}) -> t == type end)
-      IO.inspect type_index
       case type_index do
         nil ->
           [keep_list]
@@ -188,10 +202,14 @@ defmodule Scalar do
     end
 
     def test do
-      data = [0.0,95.0]
+      data = {0.0,95.0}
       a = create data, 10, 20, [stop: :major]
       get_tick_list a
     end
 
-
+    def test2 do
+      data = [4.5, 2.3, 7.8, 1.0, 3.0, 6.3]
+      Scalar.create(:data, data, 10, 20, [sync: true, stop: :major])
+      |> Scalar.get_tick_list
+    end
   end

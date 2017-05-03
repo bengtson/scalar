@@ -43,7 +43,6 @@ defmodule ScalarTest do
     data = [0,1.2]
     a = Scalar.create data, 4, 10, [stop: :minor]
     list = Scalar.get_tick_list a
-    IO.inspect list
     assert length(list) == 6
     assert {_,_,_,:major} = Enum.at(list,0)
     assert {_,_,_,:minor} = Enum.at(list,5)
@@ -53,7 +52,6 @@ defmodule ScalarTest do
     data = [0,1.2]
     a = Scalar.create data, 4, 10, [stop: :major]
     list = Scalar.get_tick_list a
-    IO.inspect list
     assert length(list) == 7
     assert {_,_,_,:major} = Enum.at(list,0)
     assert {_,_,_,:major} = Enum.at(list,6)
