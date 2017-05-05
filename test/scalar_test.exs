@@ -60,4 +60,14 @@ defmodule ScalarTest do
     assert {_,_,_,:major} = Enum.at(list,0)
     assert {_,_,_,:major} = Enum.at(list,6)
   end
+
+  test "tick list range" do
+    {min, max} =
+      [0,1.2]
+      |> Scalar.create(4, 10, [stop: :major])
+      |> Scalar.get_tick_list
+      |> Scalar.get_tick_list_range
+    assert min == 0.0
+    assert max == 1.5
+  end
 end

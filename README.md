@@ -40,10 +40,7 @@ The same approach can be used for the X axis and grid lines.
 
 Development Snapshot
 
-Major refactoring to clean up the code.
-Tests working.
-Need to better define the :stop functionality.
-
+Added Scalar.get_tick_list_range
 
 ## Development List
 

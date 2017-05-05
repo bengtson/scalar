@@ -64,6 +64,13 @@ defmodule Scalar do
 
     end
 
+    def get_tick_list_range tick_list do
+      {{_, min, _, _}, {_, max, _, _}} =
+        tick_list
+        |> Enum.min_max_by(fn({_,v,_,_}) -> v end)
+      {min, max}
+    end
+
     defp inject_zero_option scalar do
       case scalar.zero do
         true -> struct(scalar, data: [0.0] ++ scalar.data)
