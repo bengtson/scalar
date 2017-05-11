@@ -36,11 +36,19 @@ These tuples are then used to drive the generation of the Y axis, the labels and
 
 The same approach can be used for the X axis and grid lines.
 
+## How It Should Work
+
+### Implementing Non-Zero Scaling
+
+
+
 ## Git Update
 
 Development Snapshot
 
-Added Scalar.get_tick_list_range
+Added ability for Scalar to do scaling for any range, such as non-zero based
+ranges.
+Much cleanup still required.
 
 ## Development List
 

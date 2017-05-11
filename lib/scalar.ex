@@ -19,15 +19,21 @@ defmodule Scalar do
       minor_allowed: nil,
       range: nil,
       normalized_range: nil,
+      normalized_min: nil,
+      normalized_max: nil,
+      scale: nil,
       magnitude: nil,
       log: nil,
       minor_target: nil,
       major_target: nil,
       minor_factor: nil,
       major_factor: nil,
+      tick_start_value: nil,
+      tick_count: nil,
       sync: true,
       stop: :major,
-      zero: true
+      zero: true,
+      tick_list: nil
     ]
 
     @doc """
@@ -59,8 +65,11 @@ defmodule Scalar do
       |> struct(major_allowed: major_allowed, minor_allowed: minor_allowed)
       |> inject_zero_option
       |> calc_key_parameters
+#      |> IO.inspect
       |> layout_ticks
       |> sync_ticks_option
+      |> finalize_values
+      |> gen_tick_list
 
     end
 
@@ -83,7 +92,12 @@ defmodule Scalar do
       range = max - min
       log = :math.log10 range
       magnitude = trunc(log)
+      scale = :math.pow(10,magnitude)
+      normalized_min = min/scale;
+      normalized_max = max/scale;
       normalized_range = :math.pow(10,log-magnitude)
+      minor_target = normalized_range / scalar.minor_allowed
+      major_target = normalized_range / scalar.major_allowed
 
       struct(scalar,
         data_minimum: min,
@@ -91,34 +105,52 @@ defmodule Scalar do
         range: range,
         log: log,
         magnitude: magnitude,
-        normalized_range: normalized_range
+        normalized_range: normalized_range,
+#        normalized_min: normalized_min,
+#        mormalized_max: normalized_max,
+        scale: scale,
+        minor_target: minor_target,
+        major_target: major_target
       )
     end
 
     defp layout_ticks scalar do
 
-      # Set tick target value.
-      normalized_range = scalar.normalized_range
-      minor_target = normalized_range / scalar.minor_allowed
-      major_target = normalized_range / scalar.major_allowed
 
       # Find the best tick values based on the factor table. This will be the
       # most ticks without exceeding the specified maximum ticks allowed.
       minor_factor =
         scalar.factors
-        |> Enum.find(fn(x) -> 1.0/x >= minor_target end)
+        |> Enum.find(&(layout_fits(scalar, &1, scalar.minor_target, scalar.minor_allowed)))
 
       major_factor =
         scalar.factors
-        |> Enum.find(fn(x) -> 1.0/x >= major_target end)
+        |> Enum.find(&(layout_fits(scalar, &1, scalar.major_target, scalar.major_allowed)))
+
 
       # Place in structure.
       struct(scalar,
-        minor_target: minor_target,
-        major_target: major_target,
         minor_factor: minor_factor,
-        major_factor: major_factor
+        major_factor: major_factor,
       )
+    end
+
+    @doc """
+    Makes sure that 1.0/factor is >= target and that the min, max range
+    also fits into the tick range.
+    """
+    defp layout_fits scalar, factor, target, allowed do
+      tick_value = 1.0/factor
+      factor_check = tick_value >= target
+
+      div_min = Float.floor(scalar.data_minimum / (tick_value * scalar.scale))
+      div_max = Float.ceil(scalar.data_maximum / (tick_value * scalar.scale))
+
+#      IO.inspect {:one, scalar.data_minimum, factor, tick_value, scalar.scale, div_min, div_max}
+
+      range_check = (div_max - div_min <= allowed)
+
+      factor_check and range_check
     end
 
     # Given a major and minor factor, the minor factor is adjusted to make
@@ -142,6 +174,21 @@ defmodule Scalar do
       struct(scalar, minor_factor: minor_factor)
     end
 
+    def finalize_values scalar do
+      tick_value = 1.0/scalar.minor_factor
+      div_min = Float.floor(scalar.data_minimum / (tick_value * scalar.scale))
+      div_max = Float.ceil(scalar.data_maximum / (tick_value * scalar.scale))
+      tick_start_value = div_min * tick_value
+      tick_count = round(div_max - div_min)
+      IO.inspect {:tick_count, tick_count, div_min, div_max, scalar.minor_factor}
+
+      # Place in structure.
+      struct(scalar,
+        tick_start_value: tick_start_value,
+        tick_count: tick_count
+      )
+    end
+
     @doc """
     Generates a list of tuples, one for each tick. Info in the tuple is:
 
@@ -153,15 +200,21 @@ defmodule Scalar do
         }
 
     """
-    def get_tick_list %Scalar{sync: true} = scalar do
-      minor_tick_value = 1.0 / scalar.minor_factor
+    def gen_tick_list scalar do
+      minor_tick_value = 1.0 / scalar.minor_factor * scalar.scale
+      tick_start_value = scalar.tick_start_value
       sync_factor = div(scalar.minor_factor, scalar.major_factor)
       magnitude = scalar.magnitude
-      list = 0..scalar.minor_allowed
-        |> Enum.map(fn(x) -> {x, x * minor_tick_value, magnitude, tick_type(x,sync_factor)} end)
+      list = 0..scalar.tick_count
+        |> Enum.map(fn(x) -> {x, tick_start_value + x * minor_tick_value, magnitude, tick_type(x,sync_factor)} end)
 
       # Trim the tick list to those specified by the caller.
-      trim_ticks(list, scalar.normalized_range, scalar.stop)
+#      trim_ticks(list, scalar.normalized_range, scalar.stop)
+      struct(scalar,tick_list: list)
+    end
+
+    def get_tick_list scalar do
+      scalar.tick_list
     end
 
     def get_minor_tick_list scalar do

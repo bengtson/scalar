@@ -2,12 +2,17 @@ defmodule ScalarTest do
   use ExUnit.Case
   doctest Scalar
 
+
+
   test "simple check" do
     data = [0, 10]
-    a = Scalar.create data, 10, 18
-    assert a.minor_factor == 10
+    a = Scalar.create data, 10, 20
+    assert a.minor_factor == 20
     assert a.major_factor == 10
   end
+
+
+
 
   test "simple check 2" do
     data = [0, 11]
@@ -43,6 +48,8 @@ defmodule ScalarTest do
     assert {_,_,_,:minor} = Enum.at(list,1)
   end
 
+@doc """
+
   test "check tick list minor stop" do
     data = [0,1.2]
     a = Scalar.create data, 4, 10, [stop: :minor]
@@ -70,4 +77,16 @@ defmodule ScalarTest do
     assert min == 0.0
     assert max == 1.5
   end
+"""
+
+  test "non-zero positive scalar" do
+    list = [579.54, 581.47]
+    |> Scalar.create(10, 20, [zero: false])
+    |> Scalar.get_tick_list
+    IO.inspect list
+
+    assert length(list) == 9
+    assert {_, 581.5, _, :major} = Enum.at(list,8)
+  end
+
 end
