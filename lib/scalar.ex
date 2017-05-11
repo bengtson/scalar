@@ -18,8 +18,10 @@ defmodule Scalar do
     minor_factor: nil,
     major_factor: nil,
     tick_start_value: nil,
+    tick_stop_value: nil,
     tick_count: nil,
     sync: true,
+    zero: false,
     tick_list: nil
   ]
 
@@ -49,6 +51,7 @@ defmodule Scalar do
     |> struct(opts)
     |> struct(data: data)
     |> struct(major_allowed: major_allowed, minor_allowed: minor_allowed)
+    |> inject_zero_option
     |> calc_key_parameters
     |> layout_ticks
     |> sync_ticks_option
@@ -58,6 +61,20 @@ defmodule Scalar do
 
   def get_tick_list scalar do
     scalar.tick_list
+  end
+
+  def get_tick_range scalar do
+    {scalar.tick_start_value, scalar.tick_stop_value}
+  end
+
+  defp inject_zero_option scalar do
+    data = case scalar.zero do
+      true ->
+        [0.0] ++ scalar.data
+      false ->
+        scalar.data
+    end
+    struct(scalar,data: data)
   end
 
   defp calc_key_parameters scalar do
@@ -144,9 +161,11 @@ defmodule Scalar do
     div_max = Float.ceil(scalar.data_maximum / (tick_value * scalar.scale))
     tick_start_value = div_min * tick_value * scalar.scale
     tick_count = round(div_max - div_min)
+    tick_stop_value = tick_start_value + tick_value * tick_count * scalar.scale
 
     struct(scalar,
       tick_start_value: tick_start_value,
+      tick_stop_value: tick_stop_value,
       tick_count: tick_count
     )
   end

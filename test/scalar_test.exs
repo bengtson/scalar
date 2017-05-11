@@ -5,8 +5,11 @@ defmodule ScalarTest do
   test "simple check" do
     data = [0, 10]
     a = Scalar.create data, 10, 20
+    {min,max} = Scalar.get_tick_range a
     assert a.minor_factor == 20
     assert a.major_factor == 10
+    assert min == 0.0
+    assert max == 10.0
   end
 
   test "simple check 2" do
@@ -23,6 +26,13 @@ defmodule ScalarTest do
     assert length(list) == 11
     assert {_,:major} = Enum.at(list,0)
     assert {_,:minor} = Enum.at(list,1)
+  end
+
+  test "inject zero option" do
+    data = [5,11]
+    a = Scalar.create data, 10, 18, [zero: true]
+    assert a.minor_factor == 10
+    assert a.major_factor == 5
   end
 
   test "non-zero positive scalar" do

@@ -47,8 +47,8 @@ major ticks every 3 inches.
 
 Development Snapshot
 
-Added documentation and tests for a different factor set.
-Much cleanup still required.
+Added 'inject zero option'.
+Added 'get_tick_range' call. Useful in setting axis end points.
 
 ## Development List
 
