@@ -28,35 +28,37 @@ Returns the following list of tuples:
 Each tuple provides the following information:
 
   - tick number,
-  - normalized tick value,
-  - tick value 10^n factor,
+  - tick value,
+  - scale factor,
   - tick type, either :minor or :major
 
 These tuples are then used to drive the generation of the Y axis, the labels and the tick marks as well as the graph lines in the horizontal direction.
 
 The same approach can be used for the X axis and grid lines.
 
-## How It Should Work
+Also, a different factor set can be provided as an option to the create. The
+following is example data for feet above sea level in a lake level chart.
 
-### Implementing Non-Zero Scaling
+  [579.54, 581.47]
+    |> Scalar.create(10, 30, [factors: [12, 6, 4, 3, 2, 1]])
+    |> Scalar.get_tick_list
 
-
+This will produce a tick list that has the minor ticks at 12 per foot and the
+major ticks every 3 inches.
 
 ## Git Update
 
 Development Snapshot
 
-Added ability for Scalar to do scaling for any range, such as non-zero based
-ranges.
+Added documentation and tests for a different factor set.
 Much cleanup still required.
 
 ## Development List
 
-  - Get the trim list tested for non-sync'd separate lists.
-  - Trimming list needs a lot of work.  Better definition.
-  - Modify the code to handle a non-zero based range.
-  - Modify the code to handle a zero crossed range.
-  - Modify the code to handle a negative zero pinned range.
+  - Might add options for start of tick list being :major or :minor and the
+    same for the end of the tick list. List would pad out to the selected
+    tick type. Currently, it can be either.
+  - Test for sync'd and non-sync'd tick lists.
   - Update the documentation.
   - Add the ExDocs
 

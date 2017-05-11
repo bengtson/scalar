@@ -2,8 +2,6 @@ defmodule ScalarTest do
   use ExUnit.Case
   doctest Scalar
 
-
-
   test "simple check" do
     data = [0, 10]
     a = Scalar.create data, 10, 20
@@ -11,32 +9,11 @@ defmodule ScalarTest do
     assert a.major_factor == 10
   end
 
-
-
-
   test "simple check 2" do
     data = [0, 11]
     a = Scalar.create data, 10, 18
     assert a.minor_factor == 10
     assert a.major_factor == 5
-  end
-
-  test "check sync true" do
-    data = [0, 1]
-    a = Scalar.create data, 4, 5, [sync: true]
-    assert a.minor_factor == 4
-    assert a.major_factor == 4
-  end
-
-  test "check sync false stop major" do
-    data = [0, 1]
-    a = Scalar.create data, 4, 5, [sync: false, stop: :true]
-    minor_list = Scalar.get_minor_tick_list a
-    major_list = Scalar.get_major_tick_list a
-    assert length(minor_list) == 6
-    assert length(major_list) == 5
-    assert a.minor_factor == 5
-    assert a.major_factor == 4
   end
 
   test "check tick list major, minor" do
@@ -48,45 +25,33 @@ defmodule ScalarTest do
     assert {_,_,_,:minor} = Enum.at(list,1)
   end
 
-@doc """
-
-  test "check tick list minor stop" do
-    data = [0,1.2]
-    a = Scalar.create data, 4, 10, [stop: :minor]
-    list = Scalar.get_tick_list a
-    assert length(list) == 6
-    assert {_,_,_,:major} = Enum.at(list,0)
-    assert {_,_,_,:minor} = Enum.at(list,5)
-  end
-
-  test "check tick list major stop" do
-    data = [0,1.2]
-    a = Scalar.create data, 4, 10, [stop: :major]
-    list = Scalar.get_tick_list a
-    assert length(list) == 7
-    assert {_,_,_,:major} = Enum.at(list,0)
-    assert {_,_,_,:major} = Enum.at(list,6)
-  end
-
-  test "tick list range" do
-    {min, max} =
-      [0,1.2]
-      |> Scalar.create(4, 10, [stop: :major])
-      |> Scalar.get_tick_list
-      |> Scalar.get_tick_list_range
-    assert min == 0.0
-    assert max == 1.5
-  end
-"""
-
   test "non-zero positive scalar" do
     list = [579.54, 581.47]
-    |> Scalar.create(10, 20, [zero: false])
+    |> Scalar.create(10, 20, [])
     |> Scalar.get_tick_list
-    IO.inspect list
 
     assert length(list) == 9
     assert {_, 581.5, _, :major} = Enum.at(list,8)
   end
 
+  test "check negative, positive range" do
+    list = [-5.0, 5.0]
+    |> Scalar.create(10, 20)
+    |> Scalar.get_tick_list
+
+    assert length(list) == 21
+    assert {20, 5.0, 1, :major} = Enum.at(list,20)
+    assert {0, -5.0, 1, :major} = Enum.at(list,0)
+  end
+
+  test "check inches scaling" do
+    list = [579.54, 581.47]
+    |> Scalar.create(10, 30, [factors: [12, 6, 4, 3, 2, 1]])
+    |> IO.inspect
+    |> Scalar.get_tick_list
+    |> IO.inspect
+
+    assert length(list) == 25
+    assert {24, 581.5, 0, :major} = Enum.at(list,24)
+  end
 end
