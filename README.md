@@ -17,20 +17,17 @@ For the data above, all information needed for plotting data using the Scaler mo
 Returns the following list of tuples:
 
     [
-      {0, 0.0, 0, :major}, {1, 0.5, 0, :minor}, {2, 1.0, 0, :major},
-      {3, 1.5, 0, :minor}, {4, 2.0, 0, :major}, {5, 2.5, 0, :minor},
-      {6, 3.0, 0, :major}, {7, 3.5, 0, :minor}, {8, 4.0, 0, :major},
-      {9, 4.5, 0, :minor}, {10, 5.0, 0, :major}, {11, 5.5, 0, :minor},
-      {12, 6.0, 0, :major}, {13, 6.5, 0, :minor}, {14, 7.0, 0, :major},
-      {15, 7.5, 0, :minor}, {16, 8.0, 0, :major}
+      {0.0, :major}, {0.5, :minor}, {1.0, :major},
+      {1.5, :minor}, {2.0, :major}, {2.5, :minor},
+      {3.0, :major}, {3.5, :minor}, {4.0, :major},
+      {4.5, :minor}, {5.0, :major}, {5.5, :minor},
+      {6.0, :major}, {6.5, :minor}, {7.0, :major},
+      {7.5, :minor}, {8.0, :major}
     ]
 
 Each tuple provides the following information:
 
-  - tick number,
-  - tick value,
-  - scale factor,
-  - tick type, either :minor or :major
+    {tick value, :minor | :major}
 
 These tuples are then used to drive the generation of the Y axis, the labels and the tick marks as well as the graph lines in the horizontal direction.
 
@@ -39,9 +36,9 @@ The same approach can be used for the X axis and grid lines.
 Also, a different factor set can be provided as an option to the create. The
 following is example data for feet above sea level in a lake level chart.
 
-  [579.54, 581.47]
-    |> Scalar.create(10, 30, [factors: [12, 6, 4, 3, 2, 1]])
-    |> Scalar.get_tick_list
+    [579.54, 581.47]
+      |> Scalar.create(10, 30, [factors: [12, 6, 4, 3, 2, 1]])
+      |> Scalar.get_tick_list
 
 This will produce a tick list that has the minor ticks at 12 per foot and the
 major ticks every 3 inches.
@@ -55,6 +52,9 @@ Much cleanup still required.
 
 ## Development List
 
+  - Add a scale option when getting the tick list that would adjust the
+    returned values based on the provided scale.
+    Add a format option that would format the tick text.
   - Might add options for start of tick list being :major or :minor and the
     same for the end of the tick list. List would pad out to the selected
     tick type. Currently, it can be either.
